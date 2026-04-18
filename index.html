@@ -77,6 +77,11 @@
                             <option value="storytime">🗣️ Curhat / Storytime (Persuasif & Relatable)</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-300 mb-1">4. API Key Gemini</label>
+                        <input type="password" id="userApiKey" placeholder="Wajib diisi jika di luar aplikasi..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-shadow">
+                        <p class="text-[10px] text-slate-400 mt-1">Gunakan API Key Free Tier dari Google AI Studio.</p>
+                    </div>
                 </div>
             </div>
 
@@ -164,7 +169,7 @@
     </div>
 
     <script>
-        // API Key
+        // API Key Environment Variable
         const apiKey = "";
         
         // DOM Elements
@@ -178,6 +183,7 @@
         
         const productName = document.getElementById('productName');
         const vibeMode = document.getElementById('vibeMode');
+        const userApiKeyInput = document.getElementById('userApiKey');
         
         const emptyState = document.getElementById('emptyState');
         const loadingState = document.getElementById('loadingState');
@@ -309,10 +315,21 @@
 
         resetBtn.addEventListener('click', resetGenerator);
 
-        // AI Text-to-Speech Feature (Gemini TTS)
+        // AI Text-to-Speech Feature (Hanya jalan jika API Key bawaan Canvas tersedia)
         async function generateAudioVO() {
             const text = fullVoStorage.value;
             if (!text) return;
+
+            const userKey = userApiKeyInput.value.trim();
+            if (userKey) {
+                showToast("❌ Fitur Audio TTS saat ini hanya didukung di lingkungan Canvas, bukan dengan API publik.");
+                return;
+            }
+
+            if (!apiKey) {
+                showToast("❌ API Key Canvas tidak terdeteksi. Fitur Audio tidak tersedia.");
+                return;
+            }
 
             generateAudioBtn.disabled = true;
             generateAudioBtn.classList.add('opacity-50', 'cursor-wait');
@@ -434,6 +451,18 @@
             if (!currentFileBase64) {
                 showToast('❌ Gambar belum diunggah.'); return;
             }
+
+            const userKey = userApiKeyInput.value.trim();
+            const activeKey = userKey || apiKey;
+
+            if (!activeKey) {
+                showToast("❌ Silakan masukkan API Key Gemini di pengaturan sebelah kiri!");
+                return;
+            }
+
+            // Jika pakai API key user (publik), otomatis gunakan model 1.5-flash agar support Free Tier.
+            // Jika di dalam Canvas, gunakan model 2.5-flash-preview.
+            const modelName = userKey ? 'gemini-1.5-flash' : 'gemini-2.5-flash-preview-09-2025';
 
             // UI Adjustments
             generateBtn.disabled = true;
@@ -566,7 +595,7 @@ FORMAT JSON WAJIB:`;
 
             try {
                 const result = await fetchWithRetry(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${activeKey}`,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -673,7 +702,7 @@ FORMAT JSON WAJIB:`;
 
             } catch (error) {
                 console.error(error);
-                showToast('❌ Gagal menghasilkan scene. Coba lagi.');
+                showToast('❌ Gagal menghasilkan scene. Pastikan API Key valid.');
                 btnIcon.style.display = "block";
                 btnText.innerText = currentStep === 5 ? `Ulangi Generate Scene 5` : `Ulangi Generate Scene ${currentStep}`;
                 
