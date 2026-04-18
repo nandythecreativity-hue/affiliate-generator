@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affiliate Prompt Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .drag-active { border-color: #ec4899 !important; background-color: rgba(236, 72, 153, 0.1) !important; }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #ec4899;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        .scene-card { border-left: 4px solid #ec4899; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-6 flex items-center justify-center">
+
+    <div class="max-w-[1400px] w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[92vh]">
+        
+        <!-- Input Section (Left Panel) -->
+        <div class="md:w-[400px] bg-slate-800 p-6 flex flex-col border-r border-slate-700 overflow-y-auto shrink-0">
+            
+            <div class="mb-6">
+                <h1 class="text-2xl font-black bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                    Affiliate Prompt Generator
+                </h1>
+                <p class="text-slate-400 text-xs mt-2 leading-relaxed">AI akan meracik 4 adegan berkesinambungan dengan Voice Over remaja, ditambah 1 scene penutup sinematik produk (B-Roll) tanpa VO.</p>
+            </div>
+
+            <div class="space-y-5 flex-1">
+                <!-- Dropzone -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-300 mb-2">1. Foto Produk / Model Utama</label>
+                    <div id="dropzone" class="border-2 border-dashed border-slate-600 bg-slate-800/50 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-700/50 transition-colors min-h-[180px]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="text-pink-400/70 mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <p class="text-sm text-slate-400 text-center font-medium">Upload Referensi Visual</p>
+                        <p class="text-xs text-slate-500 mt-1 text-center">Visual ini akan dikunci konsistensinya sampai scene 5</p>
+                        <input type="file" id="fileInput" accept="image/*" class="hidden">
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div id="previewContainer" class="hidden mt-3 relative rounded-2xl overflow-hidden border border-slate-700 group h-48">
+                        <img id="imagePreview" src="" alt="Preview" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-slate-900/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                            <button id="removeImgBtn" class="bg-red-500/90 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-transform hover:scale-105">
+                                Ganti Gambar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inputs -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-300 mb-1">2. Nama Produk / Promo</label>
+                        <input type="text" id="productName" placeholder="Cth: Liptint GlowX / Diskon 50%" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-shadow">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-300 mb-1">3. Vibe Promosi</label>
+                        <select id="vibeMode" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none cursor-pointer">
+                            <option value="energetic">✨ Enerjik, Ceria & Kekinian (Trendy Gen Z)</option>
+                            <option value="elegant">💅 Elegan, Estetik & Mewah (Beauty/Fashion)</option>
+                            <option value="storytime">🗣️ Curhat / Storytime (Persuasif & Relatable)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action -->
+            <div class="mt-6 flex flex-col gap-3">
+                <button id="generateBtn" class="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold py-4 rounded-2xl transition-all flex justify-center items-center gap-2 shadow-lg shadow-pink-500/25 active:scale-[0.98]">
+                    <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    <span id="btnText">Mulai Generate Scene 1</span>
+                </button>
+                <button id="resetBtn" class="hidden w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-all justify-center items-center gap-2 text-sm shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                    Mulai Ulang (Reset)
+                </button>
+            </div>
+        </div>
+
+        <!-- Output Section (Right Panel) -->
+        <div class="flex-1 bg-[#0b1120] flex flex-col relative h-full overflow-hidden">
+            
+            <!-- Header Result -->
+            <div class="p-5 border-b border-slate-800/80 flex justify-between items-center bg-slate-900/50 backdrop-blur z-10 shrink-0 flex-wrap gap-2">
+                <h2 class="text-base font-bold text-slate-200 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-pink-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>
+                    Storyboard & Prompts
+                </h2>
+                <div class="flex gap-2 items-center flex-wrap">
+                    <!-- Audio Player UI -->
+                    <audio id="audioPlayer" controls class="hidden h-8 w-48 rounded-full outline-none"></audio>
+                    
+                    <button onclick="downloadAudio()" id="downloadAudioBtn" class="hidden text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors items-center gap-1 border border-blue-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Download Audio
+                    </button>
+
+                    <button onclick="generateAudioVO()" id="generateAudioBtn" class="hidden text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors items-center gap-1 border border-emerald-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                        <span id="audioBtnText">Play VO Audio</span>
+                    </button>
+
+                    <button onclick="copyAllVO()" id="copyAllBtn" class="hidden text-pink-400 hover:text-white bg-pink-500/10 hover:bg-pink-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors items-center gap-1 border border-pink-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copy Full VO Script
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 relative scroll-smooth" id="resultContainer">
+                
+                <!-- Initial State -->
+                <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+                    <div class="w-24 h-24 mb-5 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                    </div>
+                    <p class="font-bold text-slate-300 text-lg">Siap Menyusun Kampanye</p>
+                    <p class="text-sm mt-2 text-slate-500 text-center max-w-sm">Upload visual produk/model, masukkan info, dan biarkan AI meracik 5 scene promosi berkesinambungan.</p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden absolute inset-0 bg-[#0b1120]/90 backdrop-blur-md flex-col items-center justify-center z-20">
+                    <div class="loader mb-6 shadow-[0_0_15px_rgba(236,72,153,0.5)]"></div>
+                    <p id="loadingText" class="text-base text-pink-400 font-bold tracking-wide animate-pulse">Merancang Scene...</p>
+                    <p class="text-xs text-slate-400 mt-2">Menganalisis gambar & menyusun prompt (~5-8 detik)</p>
+                </div>
+
+                <!-- Result Content (Injected by JS) -->
+                <div id="resultState" class="hidden flex-col gap-6 pb-12 max-w-4xl mx-auto">
+                    <!-- Visual Analysis -->
+                    <div id="visualAnalysisContainer" class="hidden bg-indigo-900/40 border border-indigo-500/30 p-4 rounded-xl mb-2">
+                        <p class="text-indigo-200 text-sm font-medium"><span class="font-bold text-indigo-400">Konsistensi Visual:</span> <span id="visualAnalysisText"></span></p>
+                    </div>
+                    <!-- Cards -->
+                    <div id="sceneCardsContainer" class="flex flex-col gap-6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden element to store full VO script for copying -->
+    <textarea id="fullVoStorage" class="hidden"></textarea>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white border border-slate-700 px-5 py-3 rounded-xl shadow-2xl transform translate-y-24 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="text-emerald-400" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span id="toastMsg" class="font-medium text-sm">Teks disalin ke clipboard!</span>
+    </div>
+
+    <script>
+        // API Key
+        const apiKey = "";
+        
+        // DOM Elements
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const removeImgBtn = document.getElementById('removeImgBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const copyAllBtn = document.getElementById('copyAllBtn');
+        
+        const productName = document.getElementById('productName');
+        const vibeMode = document.getElementById('vibeMode');
+        
+        const emptyState = document.getElementById('emptyState');
+        const loadingState = document.getElementById('loadingState');
+        const resultState = document.getElementById('resultState');
+        const fullVoStorage = document.getElementById('fullVoStorage');
+        
+        const audioPlayer = document.getElementById('audioPlayer');
+        const generateAudioBtn = document.getElementById('generateAudioBtn');
+        const audioBtnText = document.getElementById('audioBtnText');
+        const downloadAudioBtn = document.getElementById('downloadAudioBtn');
+
+        const btnText = document.getElementById('btnText');
+        const btnIcon = document.getElementById('btnIcon');
+        const resetBtn = document.getElementById('resetBtn');
+        const loadingText = document.getElementById('loadingText');
+        const visualAnalysisContainer = document.getElementById('visualAnalysisContainer');
+        const visualAnalysisTextEl = document.getElementById('visualAnalysisText');
+        const sceneCardsContainer = document.getElementById('sceneCardsContainer');
+        
+        let currentFileBase64 = null;
+        let currentMimeType = null;
+        let currentStep = 1;
+        let accumulatedScenes = [];
+        let visualAnalysisMemo = "";
+        let currentAudioUrl = null;
+
+        // File Handling
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-active'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-active'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault(); dropzone.classList.remove('drag-active');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('❌ Harap unggah file gambar (JPG/PNG).'); return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                dropzone.classList.add('hidden');
+                previewContainer.classList.remove('hidden');
+                currentMimeType = file.type;
+                currentFileBase64 = e.target.result.split(',')[1];
+            };
+            reader.readAsDataURL(file);
+        }
+
+        removeImgBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentFileBase64 = null;
+            currentMimeType = null;
+            imagePreview.src = '';
+            previewContainer.classList.add('hidden');
+            dropzone.classList.remove('hidden');
+            fileInput.value = '';
+        });
+
+        // Utils
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            executeCopy(text);
+        }
+
+        function copyPrompt(buttonEl) {
+            const text = buttonEl.nextElementSibling.innerText;
+            executeCopy(text);
+        }
+
+        function copyAllVO() {
+            executeCopy(fullVoStorage.value);
+            showToast('Seluruh skrip VO (Scene 1-4) disalin!');
+        }
+
+        function executeCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('Teks berhasil disalin!');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.transform = 'translateY(100px)';
+                toast.style.opacity = '0';
+            }, 3000);
+        }
+
+        function resetGenerator() {
+            currentStep = 1;
+            accumulatedScenes = [];
+            visualAnalysisMemo = "";
+            sceneCardsContainer.innerHTML = "";
+            visualAnalysisContainer.classList.add('hidden');
+            resultState.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            copyAllBtn.classList.add('hidden');
+            generateAudioBtn.classList.add('hidden');
+            audioPlayer.classList.add('hidden');
+            downloadAudioBtn.classList.add('hidden');
+            downloadAudioBtn.classList.remove('flex');
+            audioPlayer.src = "";
+            
+            if (currentAudioUrl) {
+                URL.revokeObjectURL(currentAudioUrl);
+                currentAudioUrl = null;
+            }
+            
+            resetBtn.classList.add('hidden');
+            fullVoStorage.value = "";
+            
+            btnText.innerText = "Mulai Generate Scene 1";
+            btnIcon.style.display = "block";
+            generateBtn.classList.remove('hidden');
+            generateBtn.classList.add('flex');
+        }
+
+        resetBtn.addEventListener('click', resetGenerator);
+
+        // AI Text-to-Speech Feature (Gemini TTS)
+        async function generateAudioVO() {
+            const text = fullVoStorage.value;
+            if (!text) return;
+
+            generateAudioBtn.disabled = true;
+            generateAudioBtn.classList.add('opacity-50', 'cursor-wait');
+            audioBtnText.innerText = "Menyiapkan Audio...";
+            
+            const payload = {
+                contents: [{ parts: [{ text: "Say energetically and cheerfully like a trendy teenage girl: " + text }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } }
+                }
+            };
+
+            try {
+                const result = await fetchWithRetry(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }
+                );
+
+                const pcmBase64 = result.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                if (!pcmBase64) throw new Error("Gagal menghasilkan audio dari model.");
+
+                const audioBlob = pcmToWav(pcmBase64, 24000); 
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                // Revoke old URL if exists
+                if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+                currentAudioUrl = audioUrl;
+                
+                audioPlayer.src = audioUrl;
+                audioPlayer.classList.remove('hidden');
+                
+                downloadAudioBtn.classList.remove('hidden');
+                downloadAudioBtn.classList.add('flex');
+                
+                audioPlayer.play();
+                
+            } catch (error) {
+                console.error(error);
+                showToast("❌ Gagal membuat audio Voice Over.");
+            } finally {
+                generateAudioBtn.disabled = false;
+                generateAudioBtn.classList.remove('opacity-50', 'cursor-wait');
+                audioBtnText.innerText = "Play VO Audio";
+            }
+        }
+
+        function downloadAudio() {
+            if (!currentAudioUrl) return;
+            const a = document.createElement('a');
+            a.href = currentAudioUrl;
+            a.download = `VO_Affiliate_Scene1to4.wav`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('Memulai unduhan audio...');
+        }
+
+        // Utility to convert raw PCM16 base64 to playable WAV format
+        function pcmToWav(pcmBase64, sampleRate = 24000) {
+            const binaryString = window.atob(pcmBase64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const wavBuffer = new ArrayBuffer(44 + bytes.length);
+            const view = new DataView(wavBuffer);
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + bytes.length, true);
+            writeString(view, 8, 'WAVE');
+
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); 
+            view.setUint16(20, 1, true); 
+            view.setUint16(22, 1, true); 
+            view.setUint32(24, sampleRate, true); 
+            view.setUint32(28, sampleRate * 2, true); 
+            view.setUint16(32, 2, true); 
+            view.setUint16(34, 16, true); 
+
+            writeString(view, 36, 'data');
+            view.setUint32(40, bytes.length, true);
+
+            const dataArray = new Uint8Array(wavBuffer, 44);
+            dataArray.set(bytes);
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(res => setTimeout(res, delays[i]));
+                }
+            }
+        }
+
+        // Generate Logic
+        generateBtn.addEventListener('click', async () => {
+            if (!currentFileBase64) {
+                showToast('❌ Gambar belum diunggah.'); return;
+            }
+
+            // UI Adjustments
+            generateBtn.disabled = true;
+            btnIcon.style.display = "none";
+            btnText.innerHTML = `<div class="loader !w-4 !h-4 !border-[2px] !border-white/20 !border-t-white mr-2 inline-block"></div> Menyusun Scene ${currentStep}...`;
+            
+            if (currentStep === 1) {
+                emptyState.classList.add('hidden');
+                resultState.classList.remove('hidden');
+                resetBtn.classList.remove('hidden');
+                resetBtn.classList.add('flex');
+            }
+            
+            copyAllBtn.classList.add('hidden');
+            loadingText.innerText = `Merancang Scene ${currentStep}...`;
+            loadingState.classList.remove('hidden');
+            loadingState.classList.add('flex');
+
+            const vibe = vibeMode.options[vibeMode.selectedIndex].text;
+            
+            let systemPrompt = "";
+            let responseSchema = {};
+
+            if (currentStep === 1) {
+                systemPrompt = `Anda adalah Sutradara Video Iklan Profesional & Copywriter spesialis audiens Gen Z.
+Tugas: Buatkan SCENE 1 (Hook awal) dari rencana Iklan 5 Scene. Durasi scene ini 8 detik.
+Produk/Promo: ${productName.value || 'Produk pada gambar'}
+Vibe Promosi: ${vibe}
+
+ATURAN VISUAL KETAT (ANTI HALUSINASI):
+- Wujud model, pakaian, atau bentuk produk HARUS 100% konsisten persis gambar input. Gunakan keyword: "exact same character as input, identical clothing, exact same product".
+- Karakter di video HANYA BERPOSE/BERAKSI (NO speaking, closed mouth).
+
+ATURAN VOICE OVER (SANGAT PENTING):
+- Voice Over dibawakan oleh: 1 Perempuan Remaja.
+- Gaya VO: Menarik, hook kuat, enerjik.
+- Panjang VO: Tepat 15 - 20 kata.
+
+FORMAT JSON WAJIB:`;
+
+                responseSchema = {
+                    type: "OBJECT",
+                    properties: {
+                        analisis_visual: { type: "STRING", description: "Analisis singkat identitas utama yang harus dipertahankan" },
+                        transisi: { type: "STRING", description: "Keterangan angle/aksi (Hook)" },
+                        prompt_video: { type: "STRING", description: "Prompt bhs Inggris detail & koma-koma (wajib sertakan 'closed mouth, no speaking')" },
+                        skrip_vo: { type: "STRING", description: "Bhs Indonesia, 15-20 kata" }
+                    },
+                    required: ["analisis_visual", "transisi", "prompt_video", "skrip_vo"]
+                };
+            } else if (currentStep <= 4) {
+                let contextStr = accumulatedScenes.map(s => `[SCENE ${s.step}] Video: ${s.prompt_video} | VO: ${s.skrip_vo}`).join("\n");
+                
+                systemPrompt = `Anda adalah Sutradara Video Iklan Profesional & Copywriter spesialis audiens Gen Z.
+Tugas: Buatkan SCENE ${currentStep} dari rencana Iklan 5 Scene. Durasi scene ini 8 detik.
+Produk/Promo: ${productName.value || 'Produk pada gambar'}
+Vibe Promosi: ${vibe}
+
+RIWAYAT SCENE SEBELUMNYA (JAGA KONTINUITAS):
+${contextStr}
+Konsistensi Karakter/Produk: ${visualAnalysisMemo}
+
+ATURAN VISUAL KETAT (ANTI HALUSINASI):
+- Scene ini HARUS merupakan EXTEND (kelanjutan gerakan/angle menyambung) dari Scene ${currentStep - 1}.
+- Wujud model, pakaian, atau produk HARUS 100% konsisten. Gunakan keyword: "exact same character as input, seamless continuous shot from previous scene".
+- NO speaking, closed mouth.
+
+ATURAN VOICE OVER (SANGAT PENTING):
+- VO menyambung kalimat dari Scene ${currentStep - 1}.
+- Panjang VO: Tepat 15 - 20 kata.
+
+FORMAT JSON WAJIB:`;
+
+                responseSchema = {
+                    type: "OBJECT",
+                    properties: {
+                        transisi: { type: "STRING", description: "Keterangan angle/aksi kelanjutan" },
+                        prompt_video: { type: "STRING", description: "Prompt bhs Inggris detail & koma-koma" },
+                        skrip_vo: { type: "STRING", description: "Bhs Indonesia, 15-20 kata kelanjutan VO sebelumnya" }
+                    },
+                    required: ["transisi", "prompt_video", "skrip_vo"]
+                };
+            } else if (currentStep === 5) {
+                let contextStr = accumulatedScenes.map(s => `[SCENE ${s.step}] Video: ${s.prompt_video}`).join("\n");
+                
+                systemPrompt = `Anda adalah Sutradara Video Iklan Profesional.
+Tugas: Buatkan SCENE 5 (Penutup / B-Roll Produk) dari rencana Iklan 5 Scene. Durasi 8 detik.
+Produk/Promo: ${productName.value || 'Produk pada gambar'}
+
+RIWAYAT VISUAL SEBELUMNYA:
+${contextStr}
+Konsistensi Produk: ${visualAnalysisMemo}
+
+ATURAN VISUAL KETAT (PRODUK SHOWCASE MURNI):
+- Scene 5 difokuskan MURNI pada VIDEO POSE SINEMATIK PRODUK.
+- Wujud produk HARUS 100% konsisten.
+- Gunakan instruksi kamera yang mengeksplorasi berbagai angle. Keyword: "exact same product as input, highly detailed macro shot, cinematic lighting, multiple angles, dynamic panning, 360 view".
+- NO speaking, closed mouth (jika ada model, hanya sebagai background/props pasif).
+
+ATURAN VOICE OVER:
+- SCENE INI TANPA VOICE OVER (Murni visual/musik latar).
+- Isi "skrip_vo" secara statis dengan: "[TANPA VO - MURNI B-ROLL SINEMATIK]"
+
+FORMAT JSON WAJIB:`;
+
+                responseSchema = {
+                    type: "OBJECT",
+                    properties: {
+                        transisi: { type: "STRING", description: "Keterangan angle sinematik produk" },
+                        prompt_video: { type: "STRING", description: "Prompt bhs Inggris fokus pada showcase produk, macro shot, multiple angles" },
+                        skrip_vo: { type: "STRING", description: "Isi dengan [TANPA VO - MURNI B-ROLL SINEMATIK]" }
+                    },
+                    required: ["transisi", "prompt_video", "skrip_vo"]
+                };
+            }
+
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: systemPrompt },
+                        { inlineData: { mimeType: currentMimeType, data: currentFileBase64 } }
+                    ]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema
+                }
+            };
+
+            try {
+                const result = await fetchWithRetry(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }
+                );
+
+                const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!responseText) throw new Error("Invalid response");
+
+                const data = JSON.parse(responseText);
+
+                // Save Data
+                if (currentStep === 1) {
+                    visualAnalysisMemo = data.analisis_visual;
+                    visualAnalysisTextEl.innerText = visualAnalysisMemo;
+                    visualAnalysisContainer.classList.remove('hidden');
+                }
+
+                accumulatedScenes.push({
+                    step: currentStep,
+                    transisi: data.transisi,
+                    prompt_video: data.prompt_video,
+                    skrip_vo: data.skrip_vo
+                });
+
+                // Update UI: Append new card
+                let newCard = document.createElement('div');
+                newCard.className = "bg-slate-800/80 border border-slate-700 rounded-2xl p-5 md:p-6 scene-card relative shadow-lg transform transition-all duration-500 translate-y-4 opacity-0";
+                newCard.innerHTML = `
+                    <div class="absolute -top-3 -left-1 bg-pink-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md">
+                        SCENE ${currentStep} (8s)
+                    </div>
+                    
+                    <div class="mt-2 mb-4 text-sm text-pink-300 font-medium flex gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5"><path d="M15 10.04L22 6.8v10.4l-7-3.24V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2.04z"></path></svg>
+                        <span>Kamera & Transisi: ${data.transisi}</span>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <!-- Prompt Video -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-slate-400">Prompt Video (Inggris)</span>
+                                <button onclick="copyPrompt(this)" class="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 font-medium bg-blue-900/30 px-2 py-1 rounded">
+                                    Salin
+                                </button>
+                                <p class="hidden">${data.prompt_video}</p>
+                            </div>
+                            <div class="bg-[#0b1120] p-3 rounded-xl border border-slate-700/50 h-[120px] overflow-y-auto">
+                                <p class="font-mono text-emerald-400 text-xs leading-relaxed">${data.prompt_video}</p>
+                            </div>
+                        </div>
+
+                        <!-- Skrip VO -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-slate-400">Skrip VO (Remaja Perempuan)</span>
+                                <button onclick="copyPrompt(this)" class="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1 font-medium bg-amber-900/30 px-2 py-1 rounded">
+                                    Salin
+                                </button>
+                                <p class="hidden">${data.skrip_vo}</p>
+                            </div>
+                            <div class="bg-amber-900/10 p-4 rounded-xl border border-amber-500/20 h-[120px] flex items-center relative">
+                                <p class="text-amber-100 text-sm font-medium italic w-full text-center leading-relaxed">"${data.skrip_vo}"</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                sceneCardsContainer.appendChild(newCard);
+                
+                // Animate entrance
+                setTimeout(() => {
+                    newCard.classList.remove('translate-y-4', 'opacity-0');
+                    newCard.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 50);
+
+                // Update Full VO Script (Filter out Scene 5)
+                fullVoStorage.value = accumulatedScenes
+                    .filter(s => s.step < 5)
+                    .map(s => s.skrip_vo).join(" ");
+                copyAllBtn.classList.remove('hidden');
+                copyAllBtn.classList.add('flex');
+                
+                generateAudioBtn.classList.remove('hidden');
+                generateAudioBtn.classList.add('flex');
+
+                // Advance Step
+                currentStep++;
+                
+                if (currentStep > 5) {
+                    generateBtn.classList.add('hidden');
+                    generateBtn.classList.remove('flex');
+                    showToast('🎉 Seluruh 5 Scene berhasil di-generate!');
+                } else {
+                    btnIcon.style.display = "block";
+                    if (currentStep === 5) {
+                        btnText.innerText = `Generate Scene 5 (Cinematic B-Roll)`;
+                    } else {
+                        btnText.innerText = `Generate Scene ${currentStep} (Extend)`;
+                    }
+                }
+
+            } catch (error) {
+                console.error(error);
+                showToast('❌ Gagal menghasilkan scene. Coba lagi.');
+                btnIcon.style.display = "block";
+                btnText.innerText = currentStep === 5 ? `Ulangi Generate Scene 5` : `Ulangi Generate Scene ${currentStep}`;
+                
+                if (currentStep === 1) {
+                    emptyState.classList.remove('hidden');
+                    resultState.classList.add('hidden');
+                    resetBtn.classList.remove('flex');
+                    resetBtn.classList.add('hidden');
+                }
+            } finally {
+                generateBtn.disabled = false;
+                loadingState.classList.add('hidden');
+                loadingState.classList.remove('flex');
+            }
+        });
+    </script>
+</body>
+</html>
