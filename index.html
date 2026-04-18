@@ -82,6 +82,14 @@
                         <input type="password" id="userApiKey" placeholder="Wajib diisi jika di luar aplikasi..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-shadow">
                         <p class="text-[10px] text-slate-400 mt-1">Gunakan API Key Free Tier dari Google AI Studio.</p>
                     </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-300 mb-1">5. Pilihan Model AI</label>
+                        <select id="aiModel" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none cursor-pointer">
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Cepat & Stabil)</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Lebih Pintar)</option>
+                            <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash Preview</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -184,6 +192,7 @@
         const productName = document.getElementById('productName');
         const vibeMode = document.getElementById('vibeMode');
         const userApiKeyInput = document.getElementById('userApiKey');
+        const aiModelSelect = document.getElementById('aiModel');
         
         const emptyState = document.getElementById('emptyState');
         const loadingState = document.getElementById('loadingState');
@@ -470,8 +479,9 @@
                 return;
             }
 
-            // PERBAIKAN: Jika pakai API key user (publik), otomatis gunakan model 1.5-flash agar support Free Tier.
-            const modelName = userKey ? 'gemini-1.5-flash' : 'gemini-2.5-flash-preview-09-2025';
+            // PERBAIKAN: Ambil pilihan model dari dropdown jika pakai API Key sendiri.
+            // (Jika berjalan di dalam Canvas tanpa API Key manual, paksa gunakan 2.5-flash)
+            const modelName = userKey ? aiModelSelect.value : 'gemini-2.5-flash-preview-09-2025';
 
             // UI Adjustments
             generateBtn.disabled = true;
@@ -588,15 +598,12 @@ FORMAT JSON WAJIB:`;
                 };
             }
 
-            // PERBAIKAN: Payload dipisah menjadi systemInstruction dan contents agar lebih disukai oleh gemini-1.5-flash
+            // PERBAIKAN: Payload digabung menjadi satu bagian 'contents' agar didukung oleh semua versi API (menghindari error systemInstruction not supported)
             const payload = {
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
                 contents: [{
                     role: "user",
                     parts: [
-                        { text: `Silakan analisis gambar ini dan buatkan spesifikasi SCENE ${currentStep} berdasarkan instruksi sistem.` },
+                        { text: systemPrompt + `\n\nSilakan analisis gambar ini dan buatkan spesifikasi SCENE ${currentStep} berdasarkan instruksi sistem di atas.` },
                         { inlineData: { mimeType: currentMimeType, data: currentFileBase64 } }
                     ]
                 }],
