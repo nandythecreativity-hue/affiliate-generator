@@ -503,7 +503,6 @@
             const vibe = vibeMode.options[vibeMode.selectedIndex].text;
             
             let systemPrompt = "";
-            let responseSchema = {};
 
             if (currentStep === 1) {
                 systemPrompt = `Anda adalah Sutradara Video Iklan Profesional & Copywriter spesialis audiens Gen Z.
@@ -520,18 +519,13 @@ ATURAN VOICE OVER (SANGAT PENTING):
 - Gaya VO: Menarik, hook kuat, enerjik.
 - Panjang VO: Tepat 15 - 20 kata.
 
-FORMAT JSON WAJIB:`;
-
-                responseSchema = {
-                    type: "OBJECT",
-                    properties: {
-                        analisis_visual: { type: "STRING", description: "Analisis singkat identitas utama yang harus dipertahankan" },
-                        transisi: { type: "STRING", description: "Keterangan angle/aksi (Hook)" },
-                        prompt_video: { type: "STRING", description: "Prompt bhs Inggris detail & koma-koma (wajib sertakan 'closed mouth, no speaking')" },
-                        skrip_vo: { type: "STRING", description: "Bhs Indonesia, 15-20 kata" }
-                    },
-                    required: ["analisis_visual", "transisi", "prompt_video", "skrip_vo"]
-                };
+FORMAT JSON WAJIB (KEMBALIKAN HANYA JSON INI, TANPA TEKS LAIN):
+{
+    "analisis_visual": "Analisis singkat identitas utama yang harus dipertahankan",
+    "transisi": "Keterangan angle/aksi (Hook)",
+    "prompt_video": "Prompt bhs Inggris detail & koma-koma (wajib sertakan 'closed mouth, no speaking')",
+    "skrip_vo": "Bhs Indonesia, 15-20 kata"
+}`;
             } else if (currentStep <= 4) {
                 let contextStr = accumulatedScenes.map(s => `[SCENE ${s.step}] Video: ${s.prompt_video} | VO: ${s.skrip_vo}`).join("\n");
                 
@@ -553,17 +547,12 @@ ATURAN VOICE OVER (SANGAT PENTING):
 - VO menyambung kalimat dari Scene ${currentStep - 1}.
 - Panjang VO: Tepat 15 - 20 kata.
 
-FORMAT JSON WAJIB:`;
-
-                responseSchema = {
-                    type: "OBJECT",
-                    properties: {
-                        transisi: { type: "STRING", description: "Keterangan angle/aksi kelanjutan" },
-                        prompt_video: { type: "STRING", description: "Prompt bhs Inggris detail & koma-koma" },
-                        skrip_vo: { type: "STRING", description: "Bhs Indonesia, 15-20 kata kelanjutan VO sebelumnya" }
-                    },
-                    required: ["transisi", "prompt_video", "skrip_vo"]
-                };
+FORMAT JSON WAJIB (KEMBALIKAN HANYA JSON INI, TANPA TEKS LAIN):
+{
+    "transisi": "Keterangan angle/aksi kelanjutan",
+    "prompt_video": "Prompt bhs Inggris detail & koma-koma",
+    "skrip_vo": "Bhs Indonesia, 15-20 kata kelanjutan VO sebelumnya"
+}`;
             } else if (currentStep === 5) {
                 let contextStr = accumulatedScenes.map(s => `[SCENE ${s.step}] Video: ${s.prompt_video}`).join("\n");
                 
@@ -578,38 +567,33 @@ Konsistensi Produk: ${visualAnalysisMemo}
 ATURAN VISUAL KETAT (PRODUK SHOWCASE MURNI):
 - Scene 5 difokuskan MURNI pada VIDEO POSE SINEMATIK PRODUK.
 - Wujud produk HARUS 100% konsisten.
-- Gunakan instruksi kamera yang mengeksplorasi berbagai angle. Keyword: "exact same product as input, highly detailed macro shot, cinematic lighting, multiple angles, dynamic panning, 360 view".
-- NO speaking, closed mouth (jika ada model, hanya sebagai background/props pasif).
+- Gunakan instruksi kamera yang mengeksplorasi berbagai angle.
+- NO speaking, closed mouth.
 
 ATURAN VOICE OVER:
 - SCENE INI TANPA VOICE OVER (Murni visual/musik latar).
 - Isi "skrip_vo" secara statis dengan: "[TANPA VO - MURNI B-ROLL SINEMATIK]"
 
-FORMAT JSON WAJIB:`;
-
-                responseSchema = {
-                    type: "OBJECT",
-                    properties: {
-                        transisi: { type: "STRING", description: "Keterangan angle sinematik produk" },
-                        prompt_video: { type: "STRING", description: "Prompt bhs Inggris fokus pada showcase produk, macro shot, multiple angles" },
-                        skrip_vo: { type: "STRING", description: "Isi dengan [TANPA VO - MURNI B-ROLL SINEMATIK]" }
-                    },
-                    required: ["transisi", "prompt_video", "skrip_vo"]
-                };
+FORMAT JSON WAJIB (KEMBALIKAN HANYA JSON INI, TANPA TEKS LAIN):
+{
+    "transisi": "Keterangan angle sinematik produk",
+    "prompt_video": "Prompt bhs Inggris fokus pada showcase produk, macro shot",
+    "skrip_vo": "[TANPA VO - MURNI B-ROLL SINEMATIK]"
+}`;
             }
 
-            // PERBAIKAN: Payload digabung menjadi satu bagian 'contents' agar didukung oleh semua versi API (menghindari error systemInstruction not supported)
+            // PERBAIKAN: Fitur responseSchema & responseMimeType dicabut total karena sering diblokir di API Key gratis.
+            // Model hanya dipaksa via teks instruksi (systemPrompt) untuk membalas dengan JSON. Cara tradisional ini didukung SEMUA API Key.
             const payload = {
                 contents: [{
                     role: "user",
                     parts: [
-                        { text: systemPrompt + `\n\nSilakan analisis gambar ini dan buatkan spesifikasi SCENE ${currentStep} berdasarkan instruksi sistem di atas.` },
+                        { text: systemPrompt + `\n\nSilakan analisis gambar ini dan buatkan spesifikasi SCENE ${currentStep}. HANYA KEMBALIKAN FORMAT JSON.` },
                         { inlineData: { mimeType: currentMimeType, data: currentFileBase64 } }
                     ]
                 }],
                 generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: responseSchema
+                    temperature: 0.7
                 }
             };
 
@@ -623,8 +607,11 @@ FORMAT JSON WAJIB:`;
                     }
                 );
 
-                const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                let responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!responseText) throw new Error("Respons dari AI kosong atau tidak valid.");
+
+                // Bersihkan markdown backticks dari JSON jika AI menambahkannya (pencegahan error parsing)
+                responseText = responseText.replace(/```json/gi, '').replace(/```/gi, '').trim();
 
                 const data = JSON.parse(responseText);
 
